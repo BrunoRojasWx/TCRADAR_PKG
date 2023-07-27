@@ -123,15 +123,26 @@ class TCR_toolkit:
 
 
 class missiondata:
+    '''
+    Creates an instance for a particular mission
 
-    def __init__(self,radardataset, stormID):
+    Takes the radar dataset instance(swath/merged), and missionID
+    Attributes and functions will provide data for the given mission
+    '''
+    def __init__(self,radardataset, missionID):
         self.radardata = radardataset
-        self.stormindex = radardataset.allmissionID.index(stormID)
+        self.stormindex = radardataset.allmissionID.index(missionID)
     
     def get_stormvbl(self, variablekey):
+        '''
+        Returns any variable present in the database for the storm instance
+        '''
         return self.radardata.get_vbl(variablekey)[self.stormindex]
     
     def get_datetime(self):
+        '''
+        Returns mission date and time in datetime format
+        '''
         import datetime as dt
         self.year = self.radardata.data.variables['merge_year'][self.stormindex]
         self.month = self.radardata.data.variables['merge_month'][self.stormindex]
@@ -162,3 +173,47 @@ class missiondata:
             field = self.get_stormvbl('total_recentered_{}'.format(fieldtype))            
             
         return field
+    
+    def azimuthal_average(self, field_variable, center_altitude=2000):
+        '''
+        Returns a 2-Dimensional array of the azimuthal storm average for the requested field
+        
+        Field options:
+
+        zonal_wind, meridional_wind, vertical_velocity, reflectivity,
+        wind_speed, radial_wind, tangential_wind, earth_relative_zonal_wind,
+        earth_relative_meridional_wind, relative_vorticity, divergence
+        '''
+        datavariable = field_variable
+        
+        longitude = self.get_stormvbl('merged_longitudes')
+        latitude = self.get_stormvbl('merged_latitudes')
+        tc_ctr_longitude = self.get_stormvbl('tc_center_longitudes')
+        tc_ctr_latitude = self.get_stormvbl('tc_center_latitudes')
+
+        center_altitude_index = list(self.radardata.get_levels()[:]).index(int(center_altitude/1000))   #pull the corresponding z-index give nthe altitude
+        if np.isnan(tc_ctr_latitude[center_altitude_index])==True:  #check if the center has a real value
+            print('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
+            return None
+        
+        from tdr_tc_centering_with_example import distance
+        #calculate the radius of each gridbox
+        radiusgrid = distance(tc_ctr_latitude[center_altitude_index],tc_ctr_longitude[center_altitude_index],latitude,longitude)
+        radiusgrid = radiusgrid.astype(np.int) #rounds radii to integers for binning
+        aziavg=[]
+        for lvindex, lv in enumerate(datavariable[0,0,:]):  #iterate over each vertical level
+            DR=datavariable[:,:,lvindex].ravel() #flattens the array in to one long 1D array
+            RR=radiusgrid.ravel() #same thing
+            keep = ~np.isnan(DR) #using this as an index allows to only look at existing data values
+            tbin = np.bincount(RR[keep],DR[keep]) #creates a sum of all the existing data values at each radius
+            rbin = np.bincount(RR[keep]) #gives the amount of grid boxes with data at each radius
+            azimean=tbin/rbin #takes the summed data values and divides them by the amount of grid boxes that have data at each radius
+            if len(azimean)<200:    #check if the data goes out to a maximum radius (200km)
+                missing_radii = 200 - len(azimean)  #calculate the number of missing radii
+                padding_array = np.empty(missing_radii)     
+                padding_array[:] = np.NaN   
+                azimean = np.append(azimean, padding_array) #add nans to fill missing radii out to 200km
+            aziavg.append(azimean)  #add the level to the azimuthal mean stack
+
+        return aziavg
+
