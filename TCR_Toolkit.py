@@ -217,3 +217,51 @@ class missiondata:
 
         return aziavg
 
+    def quadrant_average(self, field_variable, center_altitude=2000):
+
+        # Pull the shear data at the closest SHIPS time to the mission
+        shD=self.get_stormvbl('shrd_ships')[8]  #index 8 is +/- 0 hours from nearest time to mission
+        ups=(shD+180) % 360 #Upshear direction
+        dws=shD #Downshear Direction
+        rts=(shD+90) % 360 #right-of-shear 
+        lfs=(shD-90) % 360 #left-of-shear
+
+        UR=[rts,ups,"UpShear Right"]#UpShear Right Quadrant
+        DR=[dws,rts,"DownShear Right"]#DownShear Right Quadrant
+        DL=[lfs,dws,"DownShear Left"]#DownShear Left Quadrant
+        UL=[ups,lfs,"UpShear Left"]#UpShear Left Quadrant
+        self.SQ=[UR,DR,DL,UL]#All shear quadrants
+
+        from tdr_tc_centering_with_example import get_bearing
+        longitude = self.get_stormvbl('merged_longitudes')
+        latitude = self.get_stormvbl('merged_latitudes')
+        tc_ctr_longitude = self.get_stormvbl('tc_center_longitudes')
+        tc_ctr_latitude = self.get_stormvbl('tc_center_latitudes')
+
+        center_altitude_index = list(self.radardata.get_levels()[:]).index(int(center_altitude/1000))   #pull the corresponding z-index give nthe altitude
+        if np.isnan(tc_ctr_latitude[center_altitude_index])==True:  #check if the center has a real value
+            print('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
+            return None
+        
+        azimuthgrid = np.rad2deg(get_bearing(tc_ctr_latitude[center_altitude_index],tc_ctr_longitude[center_altitude_index],latitude,longitude))
+        azimuthgrid = ((-azimuthgrid+90)%360).astype(np.int32) #converts to meteo azimuth, rounds radii to integers for binning
+
+        q_means = []
+        import copy
+        for qmn, shrquad in enumerate(self.SQ):  # loop over each quadrant
+            data = copy.copy(field_variable)
+            Alim=shrquad[0]#edges of the desired quadrant
+            Blim=shrquad[1]
+            if Alim < Blim:
+                for i in range(len(latitude)):
+                    for j in range(len(latitude)):
+                        if (azimuthgrid[i][j] < Alim or azimuthgrid[i][j] > Blim):
+                            data[i][j] = np.nan
+            else:
+                for i in range(len(latitude)):
+                    for j in range(len(latitude)):
+                        if (azimuthgrid[i][j] > Alim and azimuthgrid[i][j] > Blim):
+                            data[i][j] = np.nan
+            q_means.append(self.azimuthal_average(data))
+        return q_means
+
