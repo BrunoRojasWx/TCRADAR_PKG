@@ -219,6 +219,11 @@ class missiondata:
         of the given field. Quadrants are returned in the order: UR,DR,DL,UL.
         (Quadrant, height, radius) (4, 37, 200)
 
+        Shear direction is chosed based on the SHIPS shrd variable. This is 
+        an annulus mean shear between 200-800km radius. The synoptic 6-hly SHIPS
+        data that is closest to the mission time is chosen. (e.g. a mission at
+        2000 UTC will use the 1800 UTC SHIPS time for the shear direction)
+
         Field options:
 
         zonal_wind, meridional_wind, vertical_velocity, reflectivity,
