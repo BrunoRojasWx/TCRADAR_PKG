@@ -257,7 +257,7 @@ class missiondata:
 
         q_means = []
         import copy
-        for qmn, shrquad in enumerate(self.SQ):  # loop over each quadrant
+        for shrquad in self.SQ:  # loop over each quadrant
             data = copy.copy(field_variable)    #duplicate the input field so it does not get overwritten
             Alim=shrquad[0]#edges of the desired quadrant
             Blim=shrquad[1]
