@@ -78,12 +78,6 @@ class TCR_toolkit:
         self.uniquestormnames=list(dict.fromkeys(self.stormnames)) #remove duplicates
         self.missionsperstorm={i:list(self.stormnames[:]).count(i) for i in list(self.stormnames[:])}
         self.number_of_swaths = self.data.variables['number_of_swaths'][:]
-        # self.levels = self.data.variables['level']
-        # self.levels = self.data.variables['level']
-        # self.levels = self.data.variables['level']
-        # self.levels = self.data.variables['level']
-        # self.levels = self.data.variables['level']
-        # self.levels = self.data.variables['level']
 
     def get_levels(self):
         return self.levels[:]
@@ -157,7 +151,7 @@ class missiondata:
     def get_field(self, fieldtype, recentered=False, total_recentered=False):
         '''
         Returns 3-dimensional grid of storm radar data (latitude/meridional 
-        displacement, longitude/zonal displacement, vertical level)
+        displacement, longitude/zonal displacement, vertical level) (200, 200, 37)
 
         Field options:
 
@@ -176,7 +170,8 @@ class missiondata:
     
     def azimuthal_average(self, field_variable, center_altitude=2000):
         '''
-        Returns a 2-Dimensional array of the azimuthal storm average for the requested field
+        Returns a 2-Dimensional array of the azimuthal storm average for 
+        the requested field. (height, radius) (37, 200)
         
         Field options:
 
@@ -185,7 +180,8 @@ class missiondata:
         earth_relative_meridional_wind, relative_vorticity, divergence
         '''
         datavariable = field_variable
-        
+
+        #pull the relevant lat/lon grid and storm center for azimuth calculation        
         longitude = self.get_stormvbl('merged_longitudes')
         latitude = self.get_stormvbl('merged_latitudes')
         tc_ctr_longitude = self.get_stormvbl('tc_center_longitudes')
@@ -218,6 +214,17 @@ class missiondata:
         return aziavg
 
     def quadrant_average(self, field_variable, center_altitude=2000):
+        '''
+        Returns 4 two-dimensional arrays of shear-relative quadrant means 
+        of the given field. Quadrants are returned in the order: UR,DR,DL,UL.
+        (Quadrant, height, radius) (4, 37, 200)
+
+        Field options:
+
+        zonal_wind, meridional_wind, vertical_velocity, reflectivity,
+        wind_speed, radial_wind, tangential_wind, earth_relative_zonal_wind,
+        earth_relative_meridional_wind, relative_vorticity, divergence
+        '''
 
         # Pull the shear data at the closest SHIPS time to the mission
         shD=self.get_stormvbl('shrd_ships')[8]  #index 8 is +/- 0 hours from nearest time to mission
@@ -233,6 +240,7 @@ class missiondata:
         self.SQ=[UR,DR,DL,UL]#All shear quadrants
 
         from tdr_tc_centering_with_example import get_bearing
+        #pull the relevant lat/lon grid and storm center for azimuth calculation
         longitude = self.get_stormvbl('merged_longitudes')
         latitude = self.get_stormvbl('merged_latitudes')
         tc_ctr_longitude = self.get_stormvbl('tc_center_longitudes')
@@ -243,25 +251,27 @@ class missiondata:
             print('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
             return None
         
+        # calculate the azimuth of each grid box
         azimuthgrid = np.rad2deg(get_bearing(tc_ctr_latitude[center_altitude_index],tc_ctr_longitude[center_altitude_index],latitude,longitude))
         azimuthgrid = ((-azimuthgrid+90)%360).astype(np.int32) #converts to meteo azimuth, rounds radii to integers for binning
 
         q_means = []
         import copy
         for qmn, shrquad in enumerate(self.SQ):  # loop over each quadrant
-            data = copy.copy(field_variable)
+            data = copy.copy(field_variable)    #duplicate the input field so it does not get overwritten
             Alim=shrquad[0]#edges of the desired quadrant
             Blim=shrquad[1]
-            if Alim < Blim:
+            #check and ignore data outside the desired quadrant
+            if Alim < Blim: #if the quadrant does not include 0 degrees azimuth (North)
                 for i in range(len(latitude)):
                     for j in range(len(latitude)):
                         if (azimuthgrid[i][j] < Alim or azimuthgrid[i][j] > Blim):
                             data[i][j] = np.nan
-            else:
+            else:           #if the quadrant does include 0 degrees azimuth (North)
                 for i in range(len(latitude)):
                     for j in range(len(latitude)):
                         if (azimuthgrid[i][j] > Alim and azimuthgrid[i][j] > Blim):
                             data[i][j] = np.nan
-            q_means.append(self.azimuthal_average(data))
-        return q_means
+            q_means.append(self.azimuthal_average(data))    #add each quadrant to a list
+        return q_means  #list of four two-dimensional arrays (quadrant, height, radius)
 
