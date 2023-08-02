@@ -189,8 +189,7 @@ class missiondata:
 
         center_altitude_index = list(self.radardata.get_levels()[:]).index(int(center_altitude/1000))   #pull the corresponding z-index give nthe altitude
         if np.isnan(tc_ctr_latitude[center_altitude_index])==True:  #check if the center has a real value
-            print('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
-            return None
+            raise Exception('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
         
         from tdr_tc_centering_with_example import distance
         #calculate the radius of each gridbox
@@ -253,8 +252,7 @@ class missiondata:
 
         center_altitude_index = list(self.radardata.get_levels()[:]).index(int(center_altitude/1000))   #pull the corresponding z-index give nthe altitude
         if np.isnan(tc_ctr_latitude[center_altitude_index])==True:  #check if the center has a real value
-            print('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
-            return None
+            raise Exception('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
         
         # calculate the azimuth of each grid box
         azimuthgrid = np.rad2deg(get_bearing(tc_ctr_latitude[center_altitude_index],tc_ctr_longitude[center_altitude_index],latitude,longitude))
