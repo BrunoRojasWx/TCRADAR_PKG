@@ -1,5 +1,5 @@
-### Functions used to determine TC center using vector differencing technique ###
-### Created by Michael Fischer on 5/20/2021 ###
+### Determine a TC center using a weighted circulation maximization method ###
+### Created by Michael Fischer on 6/7/2023 ###
 
 
 # Import libraries:
@@ -109,8 +109,8 @@ def recenter_tc(uwind,vwind,lons,lats,num_sectors,spad,num_iterations,olon=None,
     6) spad is the number of gridpoints in each direction from the center to search for maximizing weighted 
        tangential wind difference
     7) num_iterations is the amount of times to loop to try to find a center that converges
-    8) olon is the first-guess center longitude (float). Default is None, and midpoint of grid will be used.
-    9) olat is the first-guess center latitude (float). Default is None, and midpoint of grid will be used.
+    8) olon is the first-guess center longitude (float). Default is None, and uses the maximum of a smoothed vorticity field.
+    9) olat is the first-guess center latitude (float). Default is None, and uses the maximum of a smoothed vorticity field.
     
     """
     
@@ -125,12 +125,12 @@ def recenter_tc(uwind,vwind,lons,lats,num_sectors,spad,num_iterations,olon=None,
     
     # Define core distance:
     search_radius = 150. # distance (km) to consider grid points for error calculations
-    core_radius = 100. # distance (km) from hypothetical TC center to weight Gaussian errors
+    core_radius = 50. # distance (km) from hypothetical TC center to weight Gaussian errors
     coverage_radius = 100. # distance (km) from hypothetical TC center to consider for data coverage
     coverage_radius_inner = 50. # inner distance (km) from hypothetical TC center to consider for data coverage
     
     # Define initial search range:
-    ipad = 6 # The first search iteration will search grid points of this interval
+    ipad = 5 # The first search iteration will search grid points of this interval
     
     # Define min_dist_weight (in case values get really small for truncation issues):
     min_dist_weight = 1.E-6 # Minimum value to use for distance weighting
@@ -159,10 +159,47 @@ def recenter_tc(uwind,vwind,lons,lats,num_sectors,spad,num_iterations,olon=None,
             pnyi = int(round(lons.shape[0]/2.,0))
             pnxi = int(round(lons.shape[1]/2.,0))
     
-    # Use midpoint of grid if no first-guess center is provided:
+    # If no first-guess center is provided, identify grid point with largest area-averaged relative vorticity:
     if olon == None:
-        pnyi = int(round(lons.shape[0]/2.,0))
-        pnxi = int(round(lons.shape[1]/2.,0))
+    
+        dx = 2000. # Zonal grid spacing (m)
+        dy = 2000. # Meridional grid spacing (m)
+
+        dvdx = np.gradient(vwind,dx,axis=1) # Zonal gradient of meridional wind
+        dudy = np.gradient(uwind,dy,axis=0) # Meridional gradient of zonal wind
+
+        relvort = dvdx - dudy # Relative vorticity
+
+        vpad = 25 # Number of indices adjacent to center point to smoothed vorticity (Be mindful of resolution of domain)
+
+        print('Smoothing vorticity field...')
+        smooth_vort = np.full((relvort.shape[0],relvort.shape[1]),np.nan)
+        for yi in range(smooth_vort.shape[0]):
+            ybeg = np.nanmax([0,yi-vpad])
+            yend = np.nanmin([int(relvort.shape[0]),yi+vpad])
+            for xi in range(smooth_vort.shape[1]):
+                # Determine data coverage:
+                if np.isfinite(relvort[yi,xi]):
+                    # Smooth array:
+                    xbeg = np.nanmax([0,xi-vpad])
+                    xend = np.nanmin([int(relvort.shape[0]),xi+vpad])
+                    
+                    # Ensure sufficient data points to mitigate locking onto noise:
+                    num_pts = float(np.size(np.where(np.isfinite(relvort[ybeg:yend+1,xbeg:xend+1]))[0]))
+                    num_total = float(np.size(relvort[ybeg:yend+1,xbeg:xend+1]))
+                    if num_pts/num_total >= 0.1:
+                        smooth_vort[yi,xi] = np.nanmean(relvort[ybeg:yend+1,xbeg:xend+1])
+
+        # Determine maximum vorticity within the smaller domain used for smoothing:
+        max_vort = np.nanmax(smooth_vort)
+
+        # Ensure positive vorticity was identified (otherwise, we're not really identifying a TC center...)
+        if max_vort > 0:
+            pnyi = np.where(smooth_vort == max_vort)[0][0]
+            pnxi = np.where(smooth_vort == max_vort)[1][0]
+        else:
+            pnyi = int(round(lons.shape[0]/2.,0))
+            pnxi = int(round(lons.shape[1]/2.,0))
     
     # Compute wind speed:
     ws = np.sqrt(uwind**2 + vwind**2)
@@ -206,8 +243,8 @@ def recenter_tc(uwind,vwind,lons,lats,num_sectors,spad,num_iterations,olon=None,
         # Establish range of grid points to search for TC center:
         # For first sweep through, use a coarser grid of interval "ipad"
         if n == 0:
-            range_y = np.arange(pnyi - ipad*ipad, pnyi + (ipad*ipad)+1,ipad)
-            range_x = np.arange(pnxi - ipad*ipad, pnxi + (ipad*ipad)+1,ipad)
+            range_y = np.arange(pnyi - 2*ipad*ipad, pnyi + (2*ipad*ipad) + 1,ipad)
+            range_x = np.arange(pnxi - 2*ipad*ipad, pnxi + (2*ipad*ipad) + 1,ipad)
         # For the remaining iterations, use original grid spacing to search:
         if n > 0:
             range_y = np.arange(pnyi - spad,pnyi + spad+1,1)
@@ -256,7 +293,7 @@ def recenter_tc(uwind,vwind,lons,lats,num_sectors,spad,num_iterations,olon=None,
                 dist_weight_raw = np.full((ws.shape[0],ws.shape[1]),np.nan) # Non-normalized distance weight
                 
                 # Apply the distance weighting for grid points with data:
-                dist_weight_raw[yf,xf] = np.exp(-1.*(((curr_dist[yf,xf] - 0.)**2)/(2.*((0.25*core_radius)**2))))
+                dist_weight_raw[yf,xf] = np.exp(-1.*(((curr_dist[yf,xf] - 0.)**2)/(2.*((core_radius)**2))))
                 
                 # Impose minimum bound of distance weighting:
                 dist_low_inds = np.where(dist_weight_raw < min_dist_weight) #Two-dimensional indices
@@ -403,13 +440,13 @@ def recenter_tc(uwind,vwind,lons,lats,num_sectors,spad,num_iterations,olon=None,
             
     # Delete old variables to conserve memory:
     del sector_mean_error
-    # del yloc
-    # del xloc
+    del yloc
+    del xloc
     del pnyi
     del pnxi
     
     
-    return tc_center_lon, tc_center_lat, vt_azi_max, tc_rmw, data_cov, yloc, xloc
+    return tc_center_lon, tc_center_lat, vt_azi_max, tc_rmw, data_cov
 
 
 ### Example application ###
@@ -443,6 +480,5 @@ if swath_cov >= 0.2:
     swath_tc_lon = tc_center_coords[0]
     swath_tc_lat = tc_center_coords[1]
 '''
-
 
 ### END ###
