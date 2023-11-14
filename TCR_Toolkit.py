@@ -212,7 +212,7 @@ class missiondata:
 
         return aziavg
 
-    def quadrant_average(self, field_variable, center_altitude=2000):
+    def quadrant_average(self, field_variable, center_altitude=2000, shD='none'):
         '''
         Returns 4 two-dimensional arrays of shear-relative quadrant means 
         of the given field. Quadrants are returned in the order: UR,DR,DL,UL.
@@ -223,6 +223,9 @@ class missiondata:
         data that is closest to the mission time is chosen. (e.g. a mission at
         2000 UTC will use the 1800 UTC SHIPS time for the shear direction)
 
+        shD keyword argument takes a shear direction as a heading in meteorological azimuth.
+        If not specified, will default to the nearest SHIPS shear direction.
+
         Field options:
 
         zonal_wind, meridional_wind, vertical_velocity, reflectivity,
@@ -230,8 +233,9 @@ class missiondata:
         earth_relative_meridional_wind, relative_vorticity, divergence
         '''
 
-        # Pull the shear data at the closest SHIPS time to the mission
-        shD=self.get_stormvbl('shrd_ships')[8]  #index 8 is +/- 0 hours from nearest time to mission
+        if shD=='none': #if no shear is explicitly passed, use the nearest SHIPS shear direction
+            # Pull the shear data at the closest SHIPS time to the mission
+            shD=self.get_stormvbl('shrd_ships')[8]  #index 8 is +/- 0 hours from nearest time to mission
         ups=(shD+180) % 360 #Upshear direction
         dws=shD #Downshear Direction
         rts=(shD+90) % 360 #right-of-shear 
