@@ -212,7 +212,7 @@ class missiondata:
 
         return aziavg
 
-    def quadrant_average(self, field_variable, center_altitude=2000, shD='none'):
+    def quadrant_average(self, field_variable, center_altitude=2000, shD='none', halftype='none'):
         '''
         Returns 4 two-dimensional arrays of shear-relative quadrant means 
         of the given field. Quadrants are returned in the order: UR,DR,DL,UL.
@@ -225,6 +225,11 @@ class missiondata:
 
         shD keyword argument takes a shear direction as a heading in meteorological azimuth.
         If not specified, will default to the nearest SHIPS shear direction.
+
+        halftype keyword argument allows to average halves of the storm, either:
+        'halfRL' for Right and Left of shear
+        'halfDU' for Upshear and Downshear halves
+        This will return a shape of (half, height, radius) (2, 37, 200)
 
         Field options:
 
@@ -241,11 +246,22 @@ class missiondata:
         rts=(shD+90) % 360 #right-of-shear 
         lfs=(shD-90) % 360 #left-of-shear
 
-        UR=[rts,ups,"UpShear Right"]#UpShear Right Quadrant
-        DR=[dws,rts,"DownShear Right"]#DownShear Right Quadrant
-        DL=[lfs,dws,"DownShear Left"]#DownShear Left Quadrant
-        UL=[ups,lfs,"UpShear Left"]#UpShear Left Quadrant
-        self.SQ=[UR,DR,DL,UL]#All shear quadrants
+        if halftype=='halfRL':#use for R/L of shear comparison
+            RoShr=[dws,ups,"Right of Shear"]#DownShear Right Quadrant
+            LoShr=[ups,dws,"Left of Shear"]#DownShear Right Quadrant
+            self.SQ=[RoShr,LoShr]   #right and left of shear halves
+
+        elif halftype=='halfDU':   #use for upshear/downshear comparison
+            DwShr=[ups,dws,"Downshear"]
+            UpShr=[dws,ups,"Upshear"]
+            self.SQ=[DwShr,UpShr]   #downshear and upshear halves
+
+        else:   #for normal shear quadrant average
+            UR=[rts,ups,"UpShear Right"]#UpShear Right Quadrant
+            DR=[dws,rts,"DownShear Right"]#DownShear Right Quadrant
+            DL=[lfs,dws,"DownShear Left"]#DownShear Left Quadrant
+            UL=[ups,lfs,"UpShear Left"]#UpShear Left Quadrant
+            self.SQ=[UR,DR,DL,UL]#All shear quadrants
 
         from tdr_tc_centering_with_example import get_bearing
         #pull the relevant lat/lon grid and storm center for azimuth calculation
