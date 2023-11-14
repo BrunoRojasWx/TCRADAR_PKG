@@ -194,7 +194,7 @@ class missiondata:
         from tdr_tc_centering_with_example import distance
         #calculate the radius of each gridbox
         radiusgrid = distance(tc_ctr_latitude[center_altitude_index],tc_ctr_longitude[center_altitude_index],latitude,longitude)
-        radiusgrid = radiusgrid.astype(np.int) #rounds radii to integers for binning
+        radiusgrid = radiusgrid.astype(np.int32) #rounds radii to integers for binning
         aziavg=[]
         for lvindex, lv in enumerate(datavariable[0,0,:]):  #iterate over each vertical level
             DR=datavariable[:,:,lvindex].ravel() #flattens the array in to one long 1D array
@@ -250,7 +250,7 @@ class missiondata:
         tc_ctr_longitude = self.get_stormvbl('tc_center_longitudes')
         tc_ctr_latitude = self.get_stormvbl('tc_center_latitudes')
 
-        center_altitude_index = list(self.radardata.get_levels()[:]).index(int(center_altitude/1000))   #pull the corresponding z-index give nthe altitude
+        center_altitude_index = list(self.radardata.get_levels()[:]).index(int(center_altitude/1000))   #pull the corresponding z-index given the altitude
         if np.isnan(tc_ctr_latitude[center_altitude_index])==True:  #check if the center has a real value
             raise Exception('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
         
