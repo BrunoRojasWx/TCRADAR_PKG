@@ -168,7 +168,7 @@ class missiondata:
             
         return field
     
-    def azimuthal_average(self, field_variable, center_altitude=2000, reflectivity_flag=False):
+    def azimuthal_average(self, field_variable, center_altitude=2000, reflectivity_flag=False, maximum_radius=200):
         '''
         Returns a 2-Dimensional array of the azimuthal storm average for 
         the requested field. (height, radius) (37, 200)
@@ -183,6 +183,9 @@ class missiondata:
         reflectivity values. This is important to average the reflectivity in linear
         units of Z and then reconvert back to dbz. Setting to True will handle
         this conversion to Z and back to dbz.
+
+        maximum_radius sets the maximum radius in kilometers over which averaging will 
+        be performed and affects the shape of the returned array. 200 km by default.
         '''
         datavariable = field_variable
 
@@ -213,12 +216,12 @@ class missiondata:
             tbin = np.bincount(RR[keep],DR[keep]) #creates a sum of all the existing data values at each radius
             rbin = np.bincount(RR[keep]) #gives the amount of grid boxes with data at each radius
             azimean=tbin/rbin #takes the summed data values and divides them by the amount of grid boxes that have data at each radius
-            if len(azimean)<200:    #check if the data goes out to a maximum radius (200km)
-                missing_radii = 200 - len(azimean)  #calculate the number of missing radii
+            if len(azimean)<maximum_radius:    #check if the data goes out to a maximum radius (200km)
+                missing_radii = maximum_radius - len(azimean)  #calculate the number of missing radii
                 padding_array = np.empty(missing_radii)     
                 padding_array[:] = np.NaN   
                 azimean = np.append(azimean, padding_array) #add nans to fill missing radii out to 200km
-            aziavg.append(azimean[0:200])  #add the level to the azimuthal mean stack, and trim down to the max radius
+            aziavg.append(azimean[0:maximum_radius])  #add the level to the azimuthal mean stack, and trim down to the max radius
         if reflectivity_flag==True:
             aziavg = 10 * np.log10(aziavg)  # convert Z back to dbz
         return aziavg
