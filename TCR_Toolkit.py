@@ -209,7 +209,6 @@ class missiondata:
         from tdr_tc_centering_with_example import distance
         #calculate the radius of each gridbox
         radiusgrid = distance(tc_ctr_latitude[center_altitude_index],tc_ctr_longitude[center_altitude_index],latitude,longitude)
-        # radiusgrid = radiusgrid.astype(np.int32) #rounds radii to integers for binning
         radial_bin_size = 35
         radiusgrid_rounded = np.round(radiusgrid / radial_bin_size) * radial_bin_size #rounds radii to integers for binning
         raveled_radii=radiusgrid_rounded.ravel() # ravel(flatten) the array of radii
