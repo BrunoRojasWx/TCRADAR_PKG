@@ -168,7 +168,7 @@ class missiondata:
             
         return field
     
-    def azimuthal_average(self, field_variable, center_altitude=2000):
+    def azimuthal_average(self, field_variable, center_altitude=2000, reflectivity_flag=False):
         '''
         Returns a 2-Dimensional array of the azimuthal storm average for 
         the requested field. (height, radius) (37, 200)
@@ -178,6 +178,11 @@ class missiondata:
         zonal_wind, meridional_wind, vertical_velocity, reflectivity,
         wind_speed, radial_wind, tangential_wind, earth_relative_zonal_wind,
         earth_relative_meridional_wind, relative_vorticity, divergence
+
+        Set reflectivity_flag = True (False by default) when averaging
+        reflectivity values. This is important to average the reflectivity in linear
+        units of Z and then reconvert back to dbz. Setting to True will handle
+        this conversion to Z and back to dbz.
         '''
         datavariable = field_variable
 
@@ -200,6 +205,11 @@ class missiondata:
             DR=datavariable[:,:,lvindex].ravel() #flattens the array in to one long 1D array
             RR=radiusgrid.ravel() #same thing
             keep = ~np.isnan(DR) #using this as an index allows to only look at existing data values
+            if reflectivity_flag==True:
+                DR[keep] = 10**(DR[keep]/10)  #convert from dbz to Z
+                # conversion needs to be done here,
+                # otherwise if done earlier, all masked values will be assigned a value 
+                # that will end up at 10dbz following the averaging and reconversion to dbz
             tbin = np.bincount(RR[keep],DR[keep]) #creates a sum of all the existing data values at each radius
             rbin = np.bincount(RR[keep]) #gives the amount of grid boxes with data at each radius
             azimean=tbin/rbin #takes the summed data values and divides them by the amount of grid boxes that have data at each radius
@@ -208,11 +218,12 @@ class missiondata:
                 padding_array = np.empty(missing_radii)     
                 padding_array[:] = np.NaN   
                 azimean = np.append(azimean, padding_array) #add nans to fill missing radii out to 200km
-            aziavg.append(azimean)  #add the level to the azimuthal mean stack
-
+            aziavg.append(azimean[0:200])  #add the level to the azimuthal mean stack, and trim down to the max radius
+        if reflectivity_flag==True:
+            aziavg = 10 * np.log10(aziavg)  # convert Z back to dbz
         return aziavg
 
-    def quadrant_average(self, field_variable, center_altitude=2000, shD='none', halftype='none'):
+    def quadrant_average(self, field_variable, center_altitude=2000, shD='none', halftype='none', reflectivity_flag=False):
         '''
         Returns 4 two-dimensional arrays of shear-relative quadrant means 
         of the given field. Quadrants are returned in the order: UR,DR,DL,UL.
@@ -295,6 +306,6 @@ class missiondata:
                     for j in range(len(latitude)):
                         if (azimuthgrid[i][j] > Alim and azimuthgrid[i][j] > Blim):
                             data[i][j] = np.nan
-            q_means.append(self.azimuthal_average(data))    #add each quadrant to a list
+            q_means.append(self.azimuthal_average(data,reflectivity_flag=reflectivity_flag))    #add each quadrant to a list
         return q_means  #list of four two-dimensional arrays (quadrant, height, radius)
 
