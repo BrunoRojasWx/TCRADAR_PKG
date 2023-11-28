@@ -168,7 +168,7 @@ class missiondata:
             
         return field
     
-    def azimuthal_average(self, field_variable, center_altitude=2000, reflectivity_flag=False, maximum_radius=200):
+    def azimuthal_average(self, field_variable, center_altitude=2000, reflectivity_flag=False, maximum_radius=200, radial_bin_size=1):
         '''
         Returns a 2-Dimensional array of the azimuthal storm average for 
         the requested field. (height, radius) (37, 200)
@@ -186,6 +186,13 @@ class missiondata:
 
         maximum_radius sets the maximum radius in kilometers over which averaging will 
         be performed and affects the shape of the returned array. 200 km by default.
+
+        radial_bin_size sets the radial bin size for the azimuthal mean in km
+        default is radial_bin_size = 1 km
+
+        The bins can be retrieved for plotting by calling the self.range_bins attribute:
+        e.g.: mission_class_name.range_bins
+        note: this will be written over if this function is called again with a different bin size
         '''
         datavariable = field_variable
 
@@ -195,33 +202,37 @@ class missiondata:
         tc_ctr_longitude = self.get_stormvbl('tc_center_longitudes')
         tc_ctr_latitude = self.get_stormvbl('tc_center_latitudes')
 
-        center_altitude_index = list(self.radardata.get_levels()[:]).index(int(center_altitude/1000))   #pull the corresponding z-index give nthe altitude
+        center_altitude_index = list(self.radardata.get_levels()[:]).index(int(center_altitude/1000))   #pull the corresponding z-index given the altitude
         if np.isnan(tc_ctr_latitude[center_altitude_index])==True:  #check if the center has a real value
             raise Exception('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
         
         from tdr_tc_centering_with_example import distance
         #calculate the radius of each gridbox
         radiusgrid = distance(tc_ctr_latitude[center_altitude_index],tc_ctr_longitude[center_altitude_index],latitude,longitude)
-        radiusgrid = radiusgrid.astype(np.int32) #rounds radii to integers for binning
+        # radiusgrid = radiusgrid.astype(np.int32) #rounds radii to integers for binning
+        radial_bin_size = 35
+        radiusgrid_rounded = np.round(radiusgrid / radial_bin_size) * radial_bin_size #rounds radii to integers for binning
+        raveled_radii=radiusgrid_rounded.ravel() # ravel(flatten) the array of radii
+        self.range_bins = np.arange(0,maximum_radius+radial_bin_size-1,radial_bin_size)
+        gridlen = len(self.range_bins)
         aziavg=[]
         for lvindex, lv in enumerate(datavariable[0,0,:]):  #iterate over each vertical level
-            DR=datavariable[:,:,lvindex].ravel() #flattens the array in to one long 1D array
-            RR=radiusgrid.ravel() #same thing
-            keep = ~np.isnan(DR) #using this as an index allows to only look at existing data values
+            raveled_data=datavariable[:,:,lvindex].ravel() #flattens the array in to one long 1D array
+            keep = ~np.isnan(raveled_data) #using this as an index allows to only look at existing data values
             if reflectivity_flag==True:
-                DR[keep] = 10**(DR[keep]/10)  #convert from dbz to Z
+                raveled_data[keep] = 10**(raveled_data[keep]/10)  #convert from dbz to Z
                 # conversion needs to be done here,
                 # otherwise if done earlier, all masked values will be assigned a value 
                 # that will end up at 10dbz following the averaging and reconversion to dbz
-            tbin = np.bincount(RR[keep],DR[keep]) #creates a sum of all the existing data values at each radius
-            rbin = np.bincount(RR[keep]) #gives the amount of grid boxes with data at each radius
-            azimean=tbin/rbin #takes the summed data values and divides them by the amount of grid boxes that have data at each radius
-            if len(azimean)<maximum_radius:    #check if the data goes out to a maximum radius (200km)
-                missing_radii = maximum_radius - len(azimean)  #calculate the number of missing radii
+            level_aziavg = np.histogram(raveled_radii[keep], weights=raveled_data[keep], bins=self.range_bins) #creates a sum of all the existing data values at each radius
+            radial_bintotals = np.histogram(raveled_radii[keep], bins=self.range_bins) #gives the amount of grid boxes with data at each radius
+            azimean = level_aziavg[0] / radial_bintotals[0] #takes the summed data values and divides them by the amount of grid boxes that have data at each radius
+            if len(azimean)<gridlen:    #check if the data goes out to a maximum radius (200km)
+                missing_radii = gridlen - len(azimean)  #calculate the number of missing radii
                 padding_array = np.empty(missing_radii)     
                 padding_array[:] = np.NaN   
                 azimean = np.append(azimean, padding_array) #add nans to fill missing radii out to 200km
-            aziavg.append(azimean[0:maximum_radius])  #add the level to the azimuthal mean stack, and trim down to the max radius
+            aziavg.append(azimean[0:gridlen])  #add the level to the azimuthal mean stack, and trim down to the max radius
         if reflectivity_flag==True:
             aziavg = 10 * np.log10(aziavg)  # convert Z back to dbz
         return aziavg
