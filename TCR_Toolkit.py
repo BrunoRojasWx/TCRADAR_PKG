@@ -11,6 +11,7 @@ import netCDF4 as NC
 import numpy as np
 import datetime as dt
 import glob
+from matplotlib.dates import date2num
 
 
 """
@@ -176,6 +177,39 @@ class missiondata:
         times_backward.reverse()  # Reverse the backward list to maintain chronological order
         
         return times_backward + [nearest_time] + times_forward
+
+    def get_shear(self):
+        '''
+        Returns: shear direction (degrees meteorological, vector heading 90 to the east, westerly), shear magnitude (kts)
+        Interpolated to the mission time from SHIPS.
+
+        Uses the SHRD and SHTD SHIPS parameters:
+        SHRD: 850-200 hPa shear magnitude (kt * 10) vs time (200-800 km)
+        SHTD: Heading (deg) of above shear vector. Westerly shear has a value of 90 deg
+
+        SHIPS variables documented here:
+        https://rammb.cira.colostate.edu/research/tropical_cyclones/ships/data/ships_predictor_file_2022.pdf
+        '''
+        #Pull the SHIPS shear variables
+        shrDir=self.get_stormvbl('shtd_ships')[:]  #shear heading degrees
+        shrMag=self.get_stormvbl('shrd_ships')[:]  #shear magnitude knots
+        print(shrMag)
+
+        #convert all the datetimes to number format for interpolation
+        numbertime_missiondatetime=date2num(self.get_datetime())    #get the mission time
+        ships_times_numberformat=date2num(self.get_SHIPS_times())   #get the SHIPS times
+
+        #interpolate to the mission time
+        shear_direction=np.interp(numbertime_missiondatetime, ships_times_numberformat, shrDir)
+        shear_magnitude=np.interp(numbertime_missiondatetime, ships_times_numberformat, shrMag)
+
+        #calculate the U and V components of the shear
+        cart_angle=-(shear_direction-90)%360 #cartesian angle
+        ush=shear_magnitude*np.cos(np.deg2rad(cart_angle))
+        vsh=shear_magnitude*np.sin(np.deg2rad(cart_angle))
+
+        return shear_direction, shear_magnitude, ush, vsh
+
     def get_field(self, fieldtype, recentered=False, total_recentered=False):
         '''
         Returns 3-dimensional grid of storm radar data (latitude/meridional 
