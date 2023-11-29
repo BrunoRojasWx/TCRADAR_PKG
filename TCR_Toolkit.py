@@ -209,12 +209,13 @@ class missiondata:
         from tdr_tc_centering_with_example import distance
         #calculate the radius of each gridbox
         radiusgrid = distance(tc_ctr_latitude[center_altitude_index],tc_ctr_longitude[center_altitude_index],latitude,longitude)
-        radial_bin_size = 35
         radiusgrid_rounded = np.round(radiusgrid / radial_bin_size) * radial_bin_size #rounds radii to integers for binning
         raveled_radii=radiusgrid_rounded.ravel() # ravel(flatten) the array of radii
         self.range_bins = np.arange(0,maximum_radius+radial_bin_size-1,radial_bin_size)
+        gridboxes_byradius = np.histogram(raveled_radii, bins=self.range_bins)    #gives the amount of grid boxes at each radius
         gridlen = len(self.range_bins)
         aziavg=[]
+        self.datacoverage=[]
         for lvindex, lv in enumerate(datavariable[0,0,:]):  #iterate over each vertical level
             raveled_data=datavariable[:,:,lvindex].ravel() #flattens the array in to one long 1D array
             keep = ~np.isnan(raveled_data) #using this as an index allows to only look at existing data values
@@ -226,14 +227,12 @@ class missiondata:
             level_aziavg = np.histogram(raveled_radii[keep], weights=raveled_data[keep], bins=self.range_bins) #creates a sum of all the existing data values at each radius
             radial_bintotals = np.histogram(raveled_radii[keep], bins=self.range_bins) #gives the amount of grid boxes with data at each radius
             azimean = level_aziavg[0] / radial_bintotals[0] #takes the summed data values and divides them by the amount of grid boxes that have data at each radius
-            if len(azimean)<gridlen:    #check if the data goes out to a maximum radius (200km)
-                missing_radii = gridlen - len(azimean)  #calculate the number of missing radii
-                padding_array = np.empty(missing_radii)     
-                padding_array[:] = np.NaN   
-                azimean = np.append(azimean, padding_array) #add nans to fill missing radii out to 200km
+            coverage_byradius = radial_bintotals[0] / gridboxes_byradius[0]
             aziavg.append(azimean[0:gridlen])  #add the level to the azimuthal mean stack, and trim down to the max radius
+            self.datacoverage.append(coverage_byradius[0:gridlen+1])
         if reflectivity_flag==True:
             aziavg = 10 * np.log10(aziavg)  # convert Z back to dbz
+        self.range_bins=self.range_bins[0:-1]   #since these are bin edges, we trim the last element to have the same shape as the data to use as an x-axis
         return aziavg
 
     def quadrant_average(self, field_variable, center_altitude=2000, shD='none', halftype='none', reflectivity_flag=False):
