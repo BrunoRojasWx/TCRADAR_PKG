@@ -25,13 +25,13 @@ A more compresenive set of examples is available in [usage_examples_tutorial.py]
 Currently the TC-RADAR Toolkit is in active development and not all features are implemented. 
 
 Features present in the TC-RADAR Toolkit include:
--[x] Accessing merged analyses (mission scale)
--[x] Pulling merged analyses variables
--[x] Accessing datetime of the mission
--[x] Accessing SHIPS shear information at the time of the mission
--[x] Calculate azimuthal means of any variable (with variable radial bin size)
--[x] Correct reflectivity averaging by conversion to Z and back to dBZ
--[x] Shear-relative quadrant and half azimuthal means
+- [x] Accessing merged analyses (mission scale)
+- [x] Pulling merged analyses variables
+- [x] Accessing datetime of the mission
+- [x] Accessing SHIPS shear information at the time of the mission
+- [x] Calculate azimuthal means of any variable (with variable radial bin size)
+- [x] Correct reflectivity averaging by conversion to Z and back to dBZ
+- [x] Shear-relative quadrant and half azimuthal means
 
 We hope to implement the list of features below:
 
