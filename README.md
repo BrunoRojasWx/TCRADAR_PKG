@@ -2,7 +2,7 @@
 
 The TC-RADAR Toolkit is designed to provide functions for meteorological analysis of the NOAA P3 airborne doppler radar dataset, Tropical Cyclone Radar Archive of Doppler Analyses with Recentering [(TC-RADAR)](https://www.aoml.noaa.gov/ftp/pub/hrd/data/radar/level3/TC_RADAR_README.pdf). The TC-RADAR Toolkit is specifically developed for TC-RADAR and the dataset can be accessed [here](https://www.aoml.noaa.gov/ftp/pub/hrd/data/radar/level3/) at NOAA Hurricane Research Division's website.
 
-The original motivation for this project was to organize the set of functions used for analysis and vizulaization of the tail doppler radar analyses into one project. The consolidation of all the tools used makes it easy to use and reference.
+The original motivation for this project was to organize the set of functions used for analysis and vizualization of the tail doppler radar analyses into one project. The consolidation of all the tools used makes it easy to use and reference.
 
 ## Installation
 
