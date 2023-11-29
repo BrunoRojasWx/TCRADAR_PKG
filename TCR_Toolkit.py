@@ -193,6 +193,10 @@ class missiondata:
         The bins can be retrieved for plotting by calling the self.range_bins attribute:
         e.g.: mission_class_name.range_bins
         note: this will be written over if this function is called again with a different bin size
+
+        Data coverage can be retrieved as an attribute:
+        e.g.: mission_class_name.datacoverage
+        Expressed as an azimuthal percentage at each radius.
         '''
         datavariable = field_variable
 
