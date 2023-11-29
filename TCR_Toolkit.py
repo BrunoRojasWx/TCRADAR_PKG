@@ -147,7 +147,35 @@ class missiondata:
         self.datetime= dt.datetime(year=self.year, month=self.month, day=self.day,
                                     hour=self.hour, minute=self.minute)
         return self.datetime
-    
+
+    def get_SHIPS_times(self):
+        '''
+        Returns a list of datetimes for the times of the SHIPS data for the mission.
+
+        The datetimes are +/- 48 hours from the nearest 6-hly time to the mission time
+
+        Index 8 corresponds to the nearest 6-hly time to the mission time.
+        '''
+        missiontime = self.get_datetime()   #pull the mission time
+
+        #calculate the nearest ships time (nearest synoptic 6-hly time)
+        base_time = dt.datetime.combine(missiontime.date(), dt.datetime.min.time())
+        sixh_interval = dt.timedelta(hours=6)
+
+        # Calculate the time difference from the base time
+        time_difference = missiontime - base_time
+        
+        # Round to the nearest 6-hour interval
+        rounded_hours = round(time_difference.total_seconds() / sixh_interval.total_seconds())
+        
+        # Calculate the nearest 6-hour time
+        nearest_time = base_time + (rounded_hours * sixh_interval)
+
+        times_forward = [nearest_time + dt.timedelta(hours=i*6) for i in range(1, 9)]
+        times_backward = [nearest_time - dt.timedelta(hours=i*6) for i in range(1, 9)]
+        times_backward.reverse()  # Reverse the backward list to maintain chronological order
+        
+        return times_backward + [nearest_time] + times_forward
     def get_field(self, fieldtype, recentered=False, total_recentered=False):
         '''
         Returns 3-dimensional grid of storm radar data (latitude/meridional 
