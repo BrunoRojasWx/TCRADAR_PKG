@@ -35,19 +35,19 @@ Features present in the TC-RADAR Toolkit include:
 
 We hope to implement the list of features below:
 
--Swath analyses function class
-    -swath mean slices
-    -contoured frequency by altitude diagrams (CFADs)
-    -vetrical mass transport
-    -CFADs by quadrants
-    -CFAD anomalies
+- Swath analyses function class
+    - swath mean slices
+    - contoured frequency by altitude diagrams (CFADs)
+    - vetrical mass transport
+    - CFADs by quadrants
+    - CFAD anomalies
     -convective stratiform separation algorithm
 
--Cross Sections
--Storm context information using SHIPS data (shear history, intensity, relative humidity)
--Vortex tilt
--Wavenumber analysis
--Data vizualization class to plot figures of the data natively
+- Cross Sections
+- Storm context information using SHIPS data (shear history, intensity, relative humidity)
+- Vortex tilt
+- Wavenumber analysis
+- Data vizualization class to plot figures of the data natively
 
 ## Contributing
 
