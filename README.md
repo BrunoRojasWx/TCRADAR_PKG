@@ -38,7 +38,7 @@ We hope to implement the list of features below:
 
 - Swath analyses function class
     - Swath mean slices
-    - Vontoured frequency by altitude diagrams (CFADs)
+    - Contoured frequency by altitude diagrams (CFADs)
     - Vertical mass transport
     - CFADs by quadrants
     - CFAD anomalies
