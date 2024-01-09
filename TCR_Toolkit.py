@@ -230,6 +230,21 @@ class missiondata:
             
         return field
     
+    def get_radiusgrid(self, center_altitude=2000):
+        longitude = self.get_stormvbl('merged_longitudes')
+        latitude = self.get_stormvbl('merged_latitudes')
+        tc_ctr_longitude = self.get_stormvbl('tc_center_longitudes')
+        tc_ctr_latitude = self.get_stormvbl('tc_center_latitudes')
+
+        center_altitude_index = list(self.radardata.get_levels()[:]).index(int(center_altitude/1000))   #pull the corresponding z-index given the altitude
+        if np.isnan(tc_ctr_latitude[center_altitude_index])==True:  #check if the center has a real value
+            raise Exception('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
+        
+        from tdr_tc_centering_with_example import distance
+        #calculate the radius of each gridbox
+        self.radiusgrid = distance(tc_ctr_latitude[center_altitude_index],tc_ctr_longitude[center_altitude_index],latitude,longitude)
+        return self.radiusgrid
+    
     def azimuthal_average(self, field_variable, center_altitude=2000, reflectivity_flag=False, maximum_radius=200, radial_bin_size=1):
         '''
         Returns a 2-Dimensional array of the azimuthal storm average for 
@@ -262,19 +277,7 @@ class missiondata:
         '''
         datavariable = field_variable
 
-        #pull the relevant lat/lon grid and storm center for azimuth calculation        
-        longitude = self.get_stormvbl('merged_longitudes')
-        latitude = self.get_stormvbl('merged_latitudes')
-        tc_ctr_longitude = self.get_stormvbl('tc_center_longitudes')
-        tc_ctr_latitude = self.get_stormvbl('tc_center_latitudes')
-
-        center_altitude_index = list(self.radardata.get_levels()[:]).index(int(center_altitude/1000))   #pull the corresponding z-index given the altitude
-        if np.isnan(tc_ctr_latitude[center_altitude_index])==True:  #check if the center has a real value
-            raise Exception('Azimuthal average ERROR:\nCenter data missing at requested altitude: {} m\nSelect a new altitude'.format(center_altitude))        
-        
-        from tdr_tc_centering_with_example import distance
-        #calculate the radius of each gridbox
-        radiusgrid = distance(tc_ctr_latitude[center_altitude_index],tc_ctr_longitude[center_altitude_index],latitude,longitude)
+        radiusgrid = self.get_radiusgrid()
         radiusgrid_rounded = np.round(radiusgrid / radial_bin_size) * radial_bin_size #rounds radii to integers for binning
         raveled_radii=radiusgrid_rounded.ravel() # ravel(flatten) the array of radii
         self.range_bins = np.arange(0,maximum_radius+radial_bin_size-1,radial_bin_size)
