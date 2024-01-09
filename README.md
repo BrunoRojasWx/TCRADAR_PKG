@@ -32,6 +32,7 @@ Features present in the TC-RADAR Toolkit include:
 - [x] Calculate azimuthal means of any variable (with variable radial bin size)
 - [x] Correct reflectivity averaging by conversion to Z and back to dBZ
 - [x] Shear-relative quadrant and half azimuthal means
+- [x] Cross Sections
 
 We hope to implement the list of features below:
 
@@ -43,7 +44,6 @@ We hope to implement the list of features below:
     - CFAD anomalies
     - Convective stratiform separation algorithm
 
-- Cross Sections
 - Storm context information using SHIPS data (shear history, intensity, relative humidity)
 - Vortex tilt
 - Wavenumber analysis
