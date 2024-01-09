@@ -390,3 +390,107 @@ class missiondata:
             q_means.append(self.azimuthal_average(data,reflectivity_flag=reflectivity_flag))    #add each quadrant to a list
         return q_means  #list of four two-dimensional arrays (quadrant, height, radius)
 
+    def calculate_end_point(start_point, distance, azimuth):
+        azimuth_rad = np.radians(azimuth)
+        x0, y0 = start_point
+        end_x = x0 + distance * np.cos(azimuth_rad)
+        end_y = y0 + distance * np.sin(azimuth_rad)
+        return round(end_x), round(end_y)
+
+    def get_line_coordinates(start_point, end_point):
+        x0, y0 = start_point
+        x1, y1 = end_point
+        dx = x1 - x0
+        dy = y1 - y0
+        steps = max(abs(dx), abs(dy))
+        x_increment = dx / steps
+        y_increment = dy / steps
+        line = [(x0 + i * x_increment, y0 + i * y_increment) for i in range(steps + 1)]
+        return line
+
+    def Bresenham_line(start_point, end_point):
+        """
+        Bresenham's Line Algorithm to calculate the points between (x1, y1) and (x2, y2).
+
+        Parameters:
+        - x1, y1: Coordinates of the starting point.
+        - x2, y2: Coordinates of the ending point.
+
+        Returns:
+        - line_points: List of tuples containing the coordinates of points along the line.
+
+        For more information see: https://en.m.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+        """
+
+        line_points = []
+
+        x1, y1 = start_point
+        x2, y2 = end_point
+
+        # Calculate differences and absolute differences
+        dx = abs(x2 - x1)
+        dy = abs(y2 - y1)
+        sx = 1 if x1 < x2 else -1
+        sy = 1 if y1 < y2 else -1
+
+        # Initial decision parameter
+        if dx > dy:
+            err = dx / 2
+        else:
+            err = -dy / 2
+
+        while True:
+            line_points.append((x1, y1))
+            if x1 == x2 and y1 == y2:
+                break
+            e2 = err
+            if e2 > -dx:
+                err -= dy
+                x1 += sx
+            if e2 < dy:
+                err += dx
+                y1 += sy
+        return line_points
+
+    def calculate_cross_section_values(line_coordinates, grid_values, radiusgrid):
+        distances = []
+        values = []
+        for point in line_coordinates:
+            x, y = point
+            try:
+                distances.append(radiusgrid[int(x), int(y)])
+                values.append(grid_values[int(x), int(y)])
+            except IndexError:
+                break
+        return values, distances
+
+    def calculate_cross_section(self, field_variable, azimuth):
+        '''
+        Calculates a vertical cross section at a specified azimuth.
+
+        Parameters:
+        - field variable: any of the variables from the get_field() function, e.g. reflectivity.
+        - azimuth: in degrees, meteorological azimuth.
+
+        Returns:
+        - 2-D vertical cross section values
+        - The radial distance axes for the cross section. 
+            Note the vertical axis can be accessed using the get_levels() function in the TCR_toolkit class.
+        '''
+
+        distance=200    #value larger than the number of grid points a cross section would span
+        start_point = (100, 100)    #currently hard-coded for the original grid, not the recentered grids
+        radiusgrid = self.get_radiusgrid()
+
+        #Calculate the line of the cross-section based on the storm center and azimuth
+        end_point = missiondata.calculate_end_point(start_point, distance, azimuth)
+
+        #Calculate the grid points that are closest to the line using the Bresenham Line Algorithm
+        line_coordinates = missiondata.Bresenham_line(start_point, end_point)
+
+        crosssection=[]
+        for level in range(len(field_variable[0,0,:])):
+            crosssection_layer = missiondata.calculate_cross_section_values(line_coordinates, field_variable[:,:,level], radiusgrid)
+            crosssection.append(crosssection_layer[0])
+        distances = crosssection_layer[1]
+        return crosssection, distances
