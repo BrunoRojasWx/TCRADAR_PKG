@@ -1,6 +1,6 @@
 # Examples on how to use the TC-RADAR toolkit
 # Created: Aug 31st 2023 (7/31/23)
-# Last Updated: Aug 31st 2023 (7/31/23)
+# Last Updated: Jan 9th 2024 (1/09/24)
 
 import os
 from TCR_Toolkit import TCR_toolkit
@@ -127,4 +127,17 @@ for qinx, ax in enumerate(axs):
 
 os.chdir('/rita/s0/bsr5234/TCRADAR_Package')
 plt.savefig('14H_div_Qavg.png')
+'''
+
+#We can calculate vertical cross sections at a specified azimuth
+#creating a height-radius cross section from the center of the storm
+
+Xsec, cross_section_distances = ivan14H.calculate_cross_section(dbz, 95)
+radarheights = TCRADAR.get_levels()
+
+'''
+import matplotlib.pyplot as plt
+plt.contourf(cross_section_distances, radarheights, Xsec)
+os.chdir('/rita/s0/bsr5234/TCRADAR_Package') 
+plt.savefig('final_crossectiontest.png')
 '''
