@@ -304,7 +304,7 @@ class missiondata:
         self.range_bins=self.range_bins[0:-1]   #since these are bin edges, we trim the last element to have the same shape as the data to use as an x-axis
         return aziavg
 
-    def quadrant_average(self, field_variable, center_altitude=2000, shD='none', halftype='none', reflectivity_flag=False):
+    def quadrant_average(self, field_variable, center_altitude=2000, shD='none', halftype='none', reflectivity_flag=False, radial_bin_size=1):
         '''
         Returns 4 two-dimensional arrays of shear-relative quadrant means 
         of the given field. Quadrants are returned in the order: UR,DR,DL,UL.
@@ -387,7 +387,7 @@ class missiondata:
                     for j in range(len(latitude)):
                         if (azimuthgrid[i][j] > Alim and azimuthgrid[i][j] > Blim):
                             data[i][j] = np.nan
-            q_means.append(self.azimuthal_average(data,reflectivity_flag=reflectivity_flag))    #add each quadrant to a list
+            q_means.append(self.azimuthal_average(data,reflectivity_flag=reflectivity_flag, radial_bin_size=radial_bin_size))    #add each quadrant to a list
         return q_means  #list of four two-dimensional arrays (quadrant, height, radius)
 
     def calculate_end_point(start_point, distance, azimuth):
